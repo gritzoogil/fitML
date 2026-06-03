@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Register - FitML{% endblock %}
+{% block content %}
+<div class="auth-container">
+    <h1>Join FitML</h1>
+    <p>AI-powered fitness tracking and prediction.</p>
+    <div class="auth-form">
+        <input type="email" id="email" placeholder="Email">
+        <input type="password" id="password" placeholder="Password (min 6 characters)">
+        <input type="password" id="confirm-password" placeholder="Confirm Password">
+        <button onclick="handleRegister()">Create Account</button>
+        <p>Already have an account? <a href="/auth/login">Login here</a></p>
+    </div>
+</div>
+{% endblock %}}

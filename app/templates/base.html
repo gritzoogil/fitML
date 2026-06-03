@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}FitML{% endblock %}</title>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">FitML</div>
+        <div class="nav-links">
+            {% if session.get('user_id') %}
+                <a href="/dashboard">Dashboard</a>
+                <a href="/logs/daily">Logs Today</a>
+                <a href="/logs/workout">Workout</a>
+                <a href="/logs/history">History</a>
+                <a href="/auth/logout">Logout</a>
+            {% else %}
+                <a href="/auth/login">Login</a>
+                <a href="/auth/register">Register</a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <footer>
+        <p>Built by Gil Bryan Guillermo</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
