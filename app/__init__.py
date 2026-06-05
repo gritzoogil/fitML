@@ -1,6 +1,9 @@
 from flask import Flask
 from config import Config
 
+from app.nutrition import nutrition_bp
+
+
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
@@ -12,5 +15,6 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(logs_bp)
+    app.register_blueprint(nutrition_bp)
 
     return app

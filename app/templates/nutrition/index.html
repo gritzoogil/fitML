@@ -1,0 +1,239 @@
+{% extends 'base.html' %}
+{% block title %}Nutrition - FitML{% endblock %}
+{% block content %}
+<div class="nutrition-container">
+
+    <!-- Daily Summary -->
+    <div class="nutrition-header">
+        <h1>Nutrition — {{ today }}</h1>
+    </div>
+
+    {% if goals %}
+    <div class="macro-cards">
+        <div class="macro-card">
+            <div class="macro-label">Calories</div>
+            <div class="macro-value">{{ totals.total_calories }}</div>
+            <div class="macro-goal">/ {{ goals.daily_calorie_target }}</div>
+            <div class="macro-bar">
+                <div class="macro-fill calories-fill" 
+                     style="width: {{ [((totals.total_calories / goals.daily_calorie_target) * 100)|int, 100]|min }}%">
+                </div>
+            </div>
+        </div>
+        <div class="macro-card">
+            <div class="macro-label">Protein (g)</div>
+            <div class="macro-value">{{ totals.total_protein|int }}</div>
+            <div class="macro-goal">/ {{ goals.daily_protein_target|int }}</div>
+            <div class="macro-bar">
+                <div class="macro-fill protein-fill"
+                     style="width: {{ [((totals.total_protein / goals.daily_protein_target) * 100)|int, 100]|min }}%">
+                </div>
+            </div>
+        </div>
+        <div class="macro-card">
+            <div class="macro-label">Carbs (g)</div>
+            <div class="macro-value">{{ totals.total_carbs|int }}</div>
+            <div class="macro-goal">/ {{ goals.daily_carb_target|int }}</div>
+            <div class="macro-bar">
+                <div class="macro-fill carbs-fill"
+                     style="width: {{ [((totals.total_carbs / goals.daily_carb_target) * 100)|int, 100]|min }}%">
+                </div>
+            </div>
+        </div>
+        <div class="macro-card">
+            <div class="macro-label">Fat (g)</div>
+            <div class="macro-value">{{ totals.total_fat|int }}</div>
+            <div class="macro-goal">/ {{ goals.daily_fat_target|int }}</div>
+            <div class="macro-bar">
+                <div class="macro-fill fat-fill"
+                     style="width: {{ [((totals.total_fat / goals.daily_fat_target) * 100)|int, 100]|min }}%">
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- LLM Food Estimator -->
+    <div class="card llm-estimator">
+        <h2>AI Food Estimator</h2>
+        <p class="muted">Describe any food — AI will estimate the calories and macros instantly.</p>
+        <div class="llm-input-row">
+            <input type="text" id="food-description" 
+                placeholder="e.g. 1 cup sinangag, 2 eggs, 1 piece longganisa" />
+            <button onclick="estimateFood()">Estimate</button>
+        </div>
+        <div id="estimate-result" class="estimate-result hidden"></div>
+    </div>
+
+    <!-- Food Log -->
+    <div class="card">
+        <div class="food-log-header">
+            <h2>Today's Food Log</h2>
+            <button onclick="toggleManualAdd()">+ Add Manually</button>
+        </div>
+
+        <!-- Manual Add Form -->
+        <div id="manual-add" class="manual-add hidden">
+            <div class="manual-form">
+                <select id="manual-meal-type">
+                    <option value="breakfast">Breakfast</option>
+                    <option value="lunch">Lunch</option>
+                    <option value="dinner">Dinner</option>
+                    <option value="snack">Snack</option>
+                </select>
+                <input type="text" id="manual-food-name" placeholder="Food name" />
+                <input type="number" id="manual-calories" placeholder="Calories" />
+                <input type="number" id="manual-protein" placeholder="Protein (g)" step="0.1" />
+                <input type="number" id="manual-carbs" placeholder="Carbs (g)" step="0.1" />
+                <input type="number" id="manual-fat" placeholder="Fat (g)" step="0.1" />
+                <button onclick="saveManualFood()">Save</button>
+            </div>
+        </div>
+
+        <!-- Food entries -->
+        {% if food_logs %}
+        <table class="log-table">
+            <thead>
+                <tr>
+                    <th>Meal</th>
+                    <th>Food</th>
+                    <th>Cal</th>
+                    <th>P (g)</th>
+                    <th>C (g)</th>
+                    <th>F (g)</th>
+                    <th>Source</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in food_logs %}
+                <tr id="food-row-{{ log.id }}">
+                    <td>{{ log.meal_type }}</td>
+                    <td>{{ log.food_name }}</td>
+                    <td>{{ log.calories }}</td>
+                    <td>{{ log.protein_g }}</td>
+                    <td>{{ log.carbs_g }}</td>
+                    <td>{{ log.fat_g }}</td>
+                    <td>
+                        <span class="source-badge {{ log.source }}">{{ log.source }}</span>
+                    </td>
+                    <td>
+                        <button class="btn-delete" onclick="deleteFood('{{ log.id }}')">✕</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <p>No food logged yet today. Use the AI estimator above!</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function estimateFood() {
+    const description = document.getElementById('food-description').value;
+    if (!description) return;
+
+    const btn = document.querySelector('.llm-estimator button');
+    btn.textContent = 'Estimating...';
+    btn.disabled = true;
+
+    const res = await fetch('/nutrition/estimate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description })
+    });
+
+    const data = await res.json();
+    btn.textContent = 'Estimate';
+    btn.disabled = false;
+
+    if (data.error) {
+        alert('Error: ' + data.error);
+        return;
+    }
+
+    const resultDiv = document.getElementById('estimate-result');
+    resultDiv.classList.remove('hidden');
+    resultDiv.innerHTML = `
+        <div class="estimate-card">
+            <div class="estimate-food-name">${data.food_name}</div>
+            <div class="estimate-macros">
+                <span class="cal">${data.calories} cal</span>
+                <span class="protein">${data.protein_g}g protein</span>
+                <span class="carbs">${data.carbs_g}g carbs</span>
+                <span class="fat">${data.fat_g}g fat</span>
+            </div>
+            <div class="estimate-notes">${data.notes}</div>
+            <div class="estimate-confidence">Confidence: ${data.confidence}</div>
+            <div class="estimate-actions">
+                <select id="estimate-meal-type">
+                    <option value="breakfast">Breakfast</option>
+                    <option value="lunch">Lunch</option>
+                    <option value="dinner">Dinner</option>
+                    <option value="snack">Snack</option>
+                </select>
+                <button onclick="saveEstimate(${JSON.stringify(data).replace(/"/g, '&quot;')})">
+                    Add to Log
+                </button>
+                <button class="btn-secondary" onclick="document.getElementById('estimate-result').classList.add('hidden')">
+                    Discard
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+async function saveEstimate(data) {
+    const mealType = document.getElementById('estimate-meal-type').value;
+    await fetch('/nutrition/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            food_name: data.food_name,
+            calories: data.calories,
+            protein_g: data.protein_g,
+            carbs_g: data.carbs_g,
+            fat_g: data.fat_g,
+            meal_type: mealType,
+            source: 'llm'
+        })
+    });
+    window.location.reload();
+}
+
+function toggleManualAdd() {
+    const form = document.getElementById('manual-add');
+    form.classList.toggle('hidden');
+}
+
+async function saveManualFood() {
+    const data = {
+        food_name: document.getElementById('manual-food-name').value,
+        calories: parseInt(document.getElementById('manual-calories').value),
+        protein_g: parseFloat(document.getElementById('manual-protein').value) || 0,
+        carbs_g: parseFloat(document.getElementById('manual-carbs').value) || 0,
+        fat_g: parseFloat(document.getElementById('manual-fat').value) || 0,
+        meal_type: document.getElementById('manual-meal-type').value,
+        source: 'manual'
+    };
+
+    await fetch('/nutrition/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+    window.location.reload();
+}
+
+async function deleteFood(logId) {
+    await fetch(`/nutrition/delete/${logId}`, { method: 'DELETE' });
+    document.getElementById(`food-row-${logId}`).remove();
+}
+</script>
+{% endblock %}
