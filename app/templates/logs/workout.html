@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block title %}Workout Log - FitML{% endblock %}
+{% block content %}
+<div class="form-container">
+    <h1>Log Workout</h1>
+    <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="workout-date" required />
+    </div>
+    <div id="exercises-container">
+        <div class="exercise-row">
+            <input type="text" placeholder="Exercise name (e.g. Pushups)" class="exercise-name" />
+            <input type="number" placeholder="Sets" class="exercise-sets" />
+            <input type="number" placeholder="Reps" class="exercise-reps" />
+            <input type="number" placeholder="Weight (lbs)" class="exercise-weight" step="0.5" />
+        </div>
+    </div>
+    <button onclick="addExerciseRow()" class="btn-secondary">+ Add Exercise</button>
+    <button onclick="saveWorkout()">Save Workout</button>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function addExerciseRow() {
+    const container = document.getElementById('exercises-container');
+    const row = document.createElement('div');
+    row.className = 'exercise-row';
+    row.innerHTML = `
+        <input type="text" placeholder="Exercise name" class="exercise-name" />
+        <input type="number" placeholder="Sets" class="exercise-sets" />
+        <input type="number" placeholder="Reps" class="exercise-reps" />
+        <input type="number" placeholder="Weight (lbs)" class="exercise-weight" step="0.5" />
+    `;
+    container.appendChild(row);
+}
+
+async function saveWorkout() {
+    const date = document.getElementById('workout-date').value;
+    const rows = document.querySelectorAll('.exercise-row');
+    const exercises = Array.from(rows).map(row => ({
+        name: row.querySelector('.exercise-name').value,
+        sets: row.querySelector('.exercise-sets').value,
+        reps: row.querySelector('.exercise-reps').value,
+        weight: row.querySelector('.exercise-weight').value,
+    })).filter(e => e.name);
+
+    const res = await fetch('/logs/workout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date, exercises })
+    });
+    const data = await res.json();
+    if (data.success) window.location.href = '/logs/history';
+}
+</script>
+{% endblock %}

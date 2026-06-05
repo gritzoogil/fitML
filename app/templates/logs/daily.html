@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}Log Today - FitML{% endblock %}
+{% block content %}
+<div class="form-container">
+    <h1>Log Today</h1>
+    <form method="POST" action="/logs/daily">
+        <div class="form-group">
+            <label>Date</label>
+            <input type="date" name="date" required value="{{ today }}" />
+        </div>
+        <div class="form-group">
+            <label>Weight (lbs)</label>
+            <input type="number" name="weight" step="0.1" placeholder="e.g. 163.0" required />
+        </div>
+        <div class="form-group">
+            <label>Calories In</label>
+            <input type="number" name="calories_in" placeholder="e.g. 1750" required />
+        </div>
+        <div class="form-group">
+            <label>Protein (g)</label>
+            <input type="number" name="protein" step="0.1" placeholder="e.g. 114.1" required />
+        </div>
+        <div class="form-group checkbox-group">
+            <label>
+                <input type="checkbox" name="workout_done" />
+                Worked out today
+            </label>
+        </div>
+        <button type="submit">Save Log</button>
+    </form>
+</div>
+{% endblock %}

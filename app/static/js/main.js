@@ -1,12 +1,13 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
 
-const firebaseConfig = JSON.parse(document.getElementById('firebase-config').textContent);
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
+const configEl = document.getElementById('firebase-config');
+const firebaseConfig = configEl ? JSON.parse(configEl.textContent) : null;
+const app = configEl ? initializeApp(firebaseConfig) : null;
+const auth = app ? getAuth(app) : null;
 
 window.handleLogin = async function() {
+    if (!auth) return;
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
     try {
@@ -26,6 +27,7 @@ window.handleLogin = async function() {
 }
 
 window.handleRegister = async function() {
+    if (!auth) return;
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
     const confirm = document.getElementById('confirm-password').value;
@@ -45,3 +47,10 @@ window.handleRegister = async function() {
         alert(err.message);
     }
 }
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+        if (window.location.pathname === '/auth/login') handleLogin();
+        if (window.location.pathname === '/auth/register') handleRegister();
+    }
+});
