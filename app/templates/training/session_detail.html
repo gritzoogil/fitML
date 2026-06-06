@@ -12,7 +12,7 @@
     {% endif %}
 
     <div class="card">
-        <table class="log-table">
+        <table class="log-table" id="sets-table">
             <thead>
                 <tr>
                     <th>Exercise</th>
@@ -22,24 +22,103 @@
                     <th>Weight (lbs)</th>
                     <th>RIR</th>
                     <th>Fatigue Cost</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
                 {% for s in sets %}
-                <tr>
-                    <td>{{ s.exercise_name }}</td>
-                    <td>{{ s.exercise_type }}</td>
-                    <td>{{ s.sets_performed }}</td>
-                    <td>{{ s.reps_performed }}</td>
-                    <td>{{ s.weight_lbs }}</td>
-                    <td>{{ s.rir }}</td>
-                    <td>{{ s.total_fatigue }}</td>
+                <tr id="row-{{ s.id }}">
+                    <td>
+                        <span class="view-mode">{{ s.exercise_name }}</span>
+                        <input class="edit-mode hidden" type="text" value="{{ s.exercise_name }}" />
+                    </td>
+                    <td>
+                        <span class="view-mode">{{ s.exercise_type }}</span>
+                        <select class="edit-mode hidden">
+                            <option value="isolation" {{ 'selected' if s.exercise_type == 'isolation' }}>Isolation</option>
+                            <option value="moderate_compound" {{ 'selected' if s.exercise_type == 'moderate_compound' }}>Moderate Compound</option>
+                            <option value="heavy_axial" {{ 'selected' if s.exercise_type == 'heavy_axial' }}>Heavy Axial</option>
+                        </select>
+                    </td>
+                    <td>
+                        <span class="view-mode">{{ s.sets_performed }}</span>
+                        <input class="edit-mode hidden" type="number" value="{{ s.sets_performed }}" min="1" style="width:60px" />
+                    </td>
+                    <td>
+                        <span class="view-mode">{{ s.reps_performed }}</span>
+                        <input class="edit-mode hidden" type="number" value="{{ s.reps_performed }}" min="1" style="width:60px" />
+                    </td>
+                    <td>
+                        <span class="view-mode">{{ s.weight_lbs }}</span>
+                        <input class="edit-mode hidden" type="number" value="{{ s.weight_lbs }}" step="2.5" min="0" style="width:80px" />
+                    </td>
+                    <td>
+                        <span class="view-mode">{{ s.rir }}</span>
+                        <input class="edit-mode hidden" type="number" value="{{ s.rir }}" min="0" max="5" step="1" style="width:60px" />
+                    </td>
+                    <td class="fatigue-cell">{{ s.total_fatigue }}</td>
+                    <td>
+                        <button class="btn-secondary view-mode" onclick="enableEdit('{{ s.id }}')">Edit</button>
+                        <button class="edit-mode hidden" onclick="saveEdit('{{ s.id }}')">Save</button>
+                        <button class="btn-secondary edit-mode hidden" onclick="cancelEdit('{{ s.id }}')">Cancel</button>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
 
-    <a href="/training">← Back to Training</a>
+    <a href="/training" style="color: var(--muted); font-size:0.9rem;">← Back to Training</a>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function enableEdit(setId) {
+    const row = document.getElementById(`row-${setId}`);
+    row.querySelectorAll('.view-mode').forEach(el => el.classList.add('hidden'));
+    row.querySelectorAll('.edit-mode').forEach(el => el.classList.remove('hidden'));
+}
+
+function cancelEdit(setId) {
+    const row = document.getElementById(`row-${setId}`);
+    row.querySelectorAll('.view-mode').forEach(el => el.classList.remove('hidden'));
+    row.querySelectorAll('.edit-mode').forEach(el => el.classList.add('hidden'));
+}
+
+async function saveEdit(setId) {
+    const row = document.getElementById(`row-${setId}`);
+    const editModes = row.querySelectorAll('.edit-mode');
+
+    const data = {
+        exercise_name: editModes[0].value,
+        exercise_type: editModes[1].value,
+        sets: editModes[2].value,
+        reps: editModes[3].value,
+        weight: editModes[4].value,
+        rir: editModes[5].value,
+    };
+
+    const res = await fetch(`/training/set/${setId}/edit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+
+    const result = await res.json();
+    if (result.success) {
+        const spans = row.querySelectorAll('.view-mode');
+        spans[0].textContent = data.exercise_name;
+        spans[1].textContent = data.exercise_type;
+        spans[2].textContent = data.sets;
+        spans[3].textContent = data.reps;
+        spans[4].textContent = data.weight;
+        spans[5].textContent = data.rir;
+        row.querySelector('.fatigue-cell').textContent = result.total_fatigue;
+        cancelEdit(setId);
+    } else {
+        alert('Error saving edit.');
+    }
+}
+</script>
 {% endblock %}

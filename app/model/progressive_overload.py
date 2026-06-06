@@ -116,12 +116,9 @@ def predict_next_session(last_weight, last_reps, last_rir, target_rir=2):
         'progression': 'increase_weight' if last_rir > target_rir else 'add_rep' if last_rir == target_rir else 'consolidate'
     }
 
-def compute_fatigue_per_set(exercise_type, rir, training_age='intermediate'):
-    """
-    Compute fatigue cost of a single set using F_cap/F_total framework.
-    """
-    k1 = 2.0  # structural fatigue base
-    k2 = 10.0  # neurological fatigue base
+def compute_fatigue_per_set(exercise_type, rir, training_age='intermediate', diet='moderate_cut', age_bracket='under_25'):
+    k1 = 2.0
+    k2 = 10.0
 
     m_ex = {
         'isolation': 0.5,
@@ -135,10 +132,24 @@ def compute_fatigue_per_set(exercise_type, rir, training_age='intermediate'):
         'advanced': 1.5
     }.get(training_age, 1.0)
 
+    m_diet = {
+        'surplus': 1.0,
+        'maintenance': 1.1,
+        'moderate_cut': 1.3,
+        'aggressive_cut': 1.6
+    }.get(diet, 1.3)
+
+    m_age = {
+        'under_25': 0.9,
+        '25_to_35': 1.0,
+        '36_to_45': 1.2,
+        '46_plus': 1.4
+    }.get(age_bracket, 0.9)
+
     structural = k1 * m_ex
     neurological = (k2 * m_exp) / (rir + 1)
 
-    return round(structural + neurological, 4)
+    return round(m_diet * m_age * (structural + neurological), 4)
 
 def compute_f_cap(weight_lbs, sleep_hours=7, diet='moderate_cut', stress='moderate', genetics='average'):
     f_base = 150.0

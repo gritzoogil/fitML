@@ -463,7 +463,7 @@ footer {
 
 .sets-header {
     display: grid;
-    grid-template-columns: 60px 80px 120px 80px 80px;
+    grid-template-columns: 30px 80px 120px 80px 80px 30px;
     gap: 0.5rem;
     color: var(--muted);
     font-size: 0.75rem;
@@ -474,9 +474,16 @@ footer {
 
 .set-row {
     display: grid;
-    grid-template-columns: 60px 80px 120px 80px 80px;
+    grid-template-columns: 30px 80px 120px 80px 80px 30px;
     gap: 0.5rem;
     margin-bottom: 0.5rem;
+    align-items: center;
+}
+
+.set-number {
+    color: var(--muted);
+    font-size: 0.85rem;
+    text-align: center;
 }
 
 .set-row input { text-align: center; }

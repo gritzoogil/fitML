@@ -88,10 +88,29 @@ def new_session():
         """, (session_id, user_id, data['date'], data['session_type'], data.get('notes', '')))
 
         # Save each exercise set
+        # Get diet and age for accurate fatigue calculation
+        checkin = execute_query("""
+            SELECT diet_status FROM weekly_checkins
+            WHERE user_id = %s ORDER BY week_start DESC LIMIT 1
+        """, (user_id,), fetch='one')
+        diet = checkin['diet_status'] if checkin else 'moderate_cut'
+
+        user_profile = execute_query("""
+            SELECT birth_date FROM users WHERE id = %s
+        """, (user_id,), fetch='one')
+
+        from app.model.progressive_overload import calculate_age
+        age = calculate_age(user_profile['birth_date']) if user_profile and user_profile['birth_date'] else 20
+        age_bracket = 'under_25' if age < 25 else '25_to_35' if age < 36 else '36_to_45' if age < 46 else '46_plus'
+
+        # Save each exercise set
         for ex in data.get('exercises', []):
             fatigue = compute_fatigue_per_set(
                 ex.get('exercise_type', 'moderate_compound'),
-                float(ex.get('rir', 2))
+                float(ex.get('rir', 2)),
+                training_age='intermediate',
+                diet=diet,
+                age_bracket=age_bracket
             )
             total_fatigue = fatigue * int(ex['sets'])
 
@@ -125,8 +144,8 @@ def view_session(session_id):
     """, (session_id, user_id), fetch='one')
 
     sets = execute_query("""
-        SELECT exercise_name, exercise_type, sets_performed,
-               reps_performed, weight_lbs, rir, fatigue_per_set, total_fatigue
+        SELECT id, exercise_name, exercise_type, sets_performed,
+            reps_performed, weight_lbs, rir, fatigue_per_set, total_fatigue
         FROM exercise_sets
         WHERE session_id = %s
         ORDER BY created_at ASC
@@ -251,3 +270,61 @@ def weekly_checkin():
         'diet_status': diet_status,
         'bmr': bmr
     })
+
+@training_bp.route('/set/<set_id>/edit', methods=['POST'])
+@login_required
+def edit_set(set_id):
+    user_id = session['user_id']
+    data = request.get_json()
+
+    # Recalculate fatigue with updated values
+    checkin = execute_query("""
+        SELECT diet_status FROM weekly_checkins
+        WHERE user_id = %s ORDER BY week_start DESC LIMIT 1
+    """, (user_id,), fetch='one')
+    diet = checkin['diet_status'] if checkin else 'moderate_cut'
+
+    user_profile = execute_query("""
+        SELECT birth_date FROM users WHERE id = %s
+    """, (user_id,), fetch='one')
+
+    from app.model.progressive_overload import calculate_age
+    age = calculate_age(user_profile['birth_date']) if user_profile and user_profile['birth_date'] else 20
+    age_bracket = 'under_25' if age < 25 else '25_to_35' if age < 36 else '36_to_45' if age < 46 else '46_plus'
+
+    exercise_type = data.get('exercise_type', 'moderate_compound')
+    rir = float(data.get('rir', 2))
+
+    fatigue = compute_fatigue_per_set(
+        exercise_type, rir,
+        training_age='intermediate',
+        diet=diet,
+        age_bracket=age_bracket
+    )
+    total_fatigue = fatigue * int(data.get('sets', 1))
+
+    execute_query("""
+        UPDATE exercise_sets
+        SET exercise_name = %s,
+            exercise_type = %s,
+            sets_performed = %s,
+            reps_performed = %s,
+            weight_lbs = %s,
+            rir = %s,
+            fatigue_per_set = %s,
+            total_fatigue = %s
+        WHERE id = %s AND user_id = %s
+    """, (
+        data.get('exercise_name'),
+        exercise_type,
+        data.get('sets', 1),
+        data.get('reps'),
+        float(data.get('weight', 0)),
+        rir,
+        fatigue,
+        total_fatigue,
+        set_id,
+        user_id
+    ))
+
+    return jsonify({'success': True, 'fatigue': fatigue, 'total_fatigue': total_fatigue})

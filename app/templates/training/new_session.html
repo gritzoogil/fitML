@@ -76,11 +76,12 @@ function addExercise() {
         </div>
         <div class="sets-grid">
             <div class="sets-header">
-                <span>Sets</span>
+                <span>#</span>
                 <span>Reps</span>
                 <span>Weight (lbs)</span>
                 <span>RIR</span>
                 <span>Fatigue</span>
+                <span></span>
             </div>
             <div class="sets-rows" id="sets-${exerciseCount}"></div>
         </div>
@@ -101,16 +102,32 @@ function autoFillType(input, id) {
 
 function addSet(exerciseId) {
     const container = document.getElementById(`sets-${exerciseId}`);
+    const setNum = container.children.length + 1;
     const row = document.createElement('div');
     row.className = 'set-row';
     row.innerHTML = `
-        <input type="number" class="set-sets" value="1" min="1" max="10" />
+        <span class="set-number">${setNum}</span>
         <input type="number" class="set-reps" placeholder="Reps" min="1" />
         <input type="number" class="set-weight" placeholder="0" step="2.5" min="0" />
-        <input type="number" class="set-rir" placeholder="RIR" min="0" max="5" step="0.5" value="2" />
+        <input type="number" class="set-rir" placeholder="RIR" min="0" max="5" step="1" value="2" />
         <span class="set-fatigue">—</span>
+        <button class="btn-delete" onclick="removeSet(this)">✕</button>
     `;
     container.appendChild(row);
+    updateSetNumbers(container);
+}
+
+function removeSet(btn) {
+    const row = btn.closest('.set-row');
+    const container = row.parentElement;
+    row.remove();
+    updateSetNumbers(container);
+}
+
+function updateSetNumbers(container) {
+    container.querySelectorAll('.set-number').forEach((el, i) => {
+        el.textContent = i + 1;
+    });
 }
 
 function removeExercise(id) {
@@ -148,7 +165,7 @@ async function saveSession() {
             exercises.push({
                 name,
                 exercise_type: type,
-                sets: row.querySelector('.set-sets').value,
+                sets: 1,
                 reps: row.querySelector('.set-reps').value,
                 weight: row.querySelector('.set-weight').value || 0,
                 rir: row.querySelector('.set-rir').value || 2,
