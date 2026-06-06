@@ -537,3 +537,131 @@ footer {
 }
 
 .modal h2 { margin-bottom: 0.25rem; }
+
+.dashboard-container { max-width: 1000px; margin: 2rem auto; }
+
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+}
+
+.stat-card.good { border-color: var(--primary); }
+.stat-card.warning { border-color: var(--warning); }
+
+.stat-label {
+    color: var(--muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+}
+
+.stat-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+}
+
+.stat-unit {
+    font-size: 1rem;
+    color: var(--muted);
+    font-weight: 400;
+}
+
+.stat-sub {
+    color: var(--muted);
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+}
+
+.chart-card { margin-bottom: 1.5rem; }
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.prediction-badge {
+    background: rgba(88,166,255,0.1);
+    color: #58a6ff;
+    border: 1px solid rgba(88,166,255,0.3);
+    border-radius: 20px;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.8rem;
+}
+
+.two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.mini-macros { display: flex; flex-direction: column; gap: 1rem; }
+
+.mini-macro { display: flex; flex-direction: column; gap: 0.25rem; }
+
+.mini-label {
+    color: var(--muted);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+}
+
+.mini-bar-wrap {
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.mini-bar {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s;
+}
+
+.cal-bar { background: var(--primary); }
+.protein-bar { background: #58a6ff; }
+.carbs-bar { background: var(--warning); }
+.fat-bar { background: var(--danger); }
+
+.mini-numbers {
+    font-size: 0.85rem;
+    color: var(--muted);
+}
+
+.today-stats { display: flex; flex-direction: column; gap: 0.75rem; }
+
+.today-stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.today-stat:last-child { border-bottom: none; }
+
+.today-label { color: var(--muted); font-size: 0.9rem; }
+.today-value { font-weight: 600; }
+
+@media (max-width: 768px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .two-col { grid-template-columns: 1fr; }
+}

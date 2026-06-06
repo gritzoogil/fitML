@@ -1,5 +1,176 @@
 {% extends 'base.html' %}
 {% block title %}Dashboard - FitML{% endblock %}
 {% block content %}
-<h1>Dashboard coming soon</h1>
+<div class="dashboard-container">
+
+    <div class="dashboard-header">
+        <h1>Dashboard</h1>
+        <span class="muted">{{ today.strftime('%B %d, %Y') }}</span>
+    </div>
+
+    <!-- Top Stats Row -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">Current Weight</div>
+            <div class="stat-value">{{ current_weight or '—' }} <span class="stat-unit">lbs</span></div>
+        </div>
+        <div class="stat-card {{ 'good' if predicted_weight and predicted_weight < current_weight else '' }}">
+            <div class="stat-label">Predicted (14 days)</div>
+            <div class="stat-value">{{ predicted_weight or '—' }} <span class="stat-unit">lbs</span></div>
+            {% if confidence %}<div class="stat-sub">{{ confidence }}% confidence</div>{% endif %}
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Goal Weight</div>
+            <div class="stat-value">{{ goals.goal_weight_lbs if goals else '—' }} <span class="stat-unit">lbs</span></div>
+            {% if days_to_goal %}<div class="stat-sub">{{ days_to_goal }} days left</div>{% endif %}
+        </div>
+        <div class="stat-card {{ 'good' if net_balance and net_balance > 0 else 'warning' if net_balance else '' }}">
+            <div class="stat-label">Net Balance</div>
+            <div class="stat-value">{{ net_balance or '—' }}</div>
+            {% if f_cap %}<div class="stat-sub">F_cap: {{ f_cap }} / F_total: {{ f_total }}</div>{% endif %}
+        </div>
+    </div>
+
+    <!-- Weight Chart -->
+    <div class="card chart-card">
+        <div class="card-header">
+            <h2>Weight Trend</h2>
+            {% if predicted_weight %}
+            <span class="prediction-badge">AI predicts {{ predicted_weight }} lbs in 14 days</span>
+            {% endif %}
+        </div>
+        <canvas id="weightChart" height="100"></canvas>
+    </div>
+
+    <!-- Today's Summary -->
+    <div class="two-col">
+
+        <!-- Nutrition -->
+        <div class="card">
+            <h2>Today's Nutrition</h2>
+            {% if today_macros and goals %}
+            <div class="mini-macros">
+                <div class="mini-macro">
+                    <div class="mini-label">Calories</div>
+                    <div class="mini-bar-wrap">
+                        <div class="mini-bar cal-bar" style="width:{{ [((today_macros.total_calories / goals.daily_calorie_target) * 100)|int, 100]|min }}%"></div>
+                    </div>
+                    <div class="mini-numbers">{{ today_macros.total_calories }} / {{ goals.daily_calorie_target }}</div>
+                </div>
+                <div class="mini-macro">
+                    <div class="mini-label">Protein</div>
+                    <div class="mini-bar-wrap">
+                        <div class="mini-bar protein-bar" style="width:{{ [((today_macros.total_protein / goals.daily_protein_target) * 100)|int, 100]|min }}%"></div>
+                    </div>
+                    <div class="mini-numbers">{{ today_macros.total_protein|int }}g / {{ goals.daily_protein_target|int }}g</div>
+                </div>
+                <div class="mini-macro">
+                    <div class="mini-label">Carbs</div>
+                    <div class="mini-bar-wrap">
+                        <div class="mini-bar carbs-bar" style="width:{{ [((today_macros.total_carbs / goals.daily_carb_target) * 100)|int, 100]|min }}%"></div>
+                    </div>
+                    <div class="mini-numbers">{{ today_macros.total_carbs|int }}g / {{ goals.daily_carb_target|int }}g</div>
+                </div>
+                <div class="mini-macro">
+                    <div class="mini-label">Fat</div>
+                    <div class="mini-bar-wrap">
+                        <div class="mini-bar fat-bar" style="width:{{ [((today_macros.total_fat / goals.daily_fat_target) * 100)|int, 100]|min }}%"></div>
+                    </div>
+                    <div class="mini-numbers">{{ today_macros.total_fat|int }}g / {{ goals.daily_fat_target|int }}g</div>
+                </div>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <p>No food logged today.</p>
+                <a href="/nutrition"><button>Log Food</button></a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Today's Log -->
+        <div class="card">
+            <h2>Today's Log</h2>
+            {% if today_log %}
+            <div class="today-stats">
+                <div class="today-stat">
+                    <span class="today-label">Weight</span>
+                    <span class="today-value">{{ today_log.weight_lbs }} lbs</span>
+                </div>
+                <div class="today-stat">
+                    <span class="today-label">Calories In</span>
+                    <span class="today-value">{{ today_log.calories_in }}</span>
+                </div>
+                <div class="today-stat">
+                    <span class="today-label">Protein</span>
+                    <span class="today-value">{{ today_log.protein_g }}g</span>
+                </div>
+                <div class="today-stat">
+                    <span class="today-label">Workout</span>
+                    <span class="today-value">{{ '✅ Done' if today_log.workout_done else '❌ Rest day' }}</span>
+                </div>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <p>No log for today yet.</p>
+                <a href="/logs/daily"><button>Log Today</button></a>
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const labels = {{ chart_labels | tojson }};
+const weights = {{ chart_weights | tojson }};
+const predicted = {{ predicted_weight | tojson }};
+
+const ctx = document.getElementById('weightChart').getContext('2d');
+
+// Split actual vs predicted
+const actualWeights = weights.slice(0, -1);
+const actualLabels = labels.slice(0, -1);
+
+new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: labels,
+        datasets: [
+            {
+                label: 'Actual Weight',
+                data: [...actualWeights, null],
+                borderColor: '#00C896',
+                backgroundColor: 'rgba(0,200,150,0.1)',
+                borderWidth: 2,
+                pointRadius: 3,
+                tension: 0.3,
+                fill: true,
+            },
+            {
+                label: 'Predicted',
+                data: [...Array(actualWeights.length - 1).fill(null), actualWeights[actualWeights.length - 1], predicted],
+                borderColor: '#58a6ff',
+                borderWidth: 2,
+                borderDash: [5, 5],
+                pointRadius: [0, 5],
+                tension: 0,
+                fill: false,
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { labels: { color: '#E6EDF3' } }
+        },
+        scales: {
+            x: { ticks: { color: '#8B949E' }, grid: { color: '#30363D' } },
+            y: { ticks: { color: '#8B949E' }, grid: { color: '#30363D' } }
+        }
+    }
+});
+</script>
 {% endblock %}
