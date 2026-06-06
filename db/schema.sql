@@ -83,3 +83,17 @@ CREATE TABLE IF NOT EXISTS progress_photos (
     notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Weekly checkins
+CREATE TABLE weekly_checkins (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id),
+    week_start DATE NOT NULL,
+    avg_sleep_hours DECIMAL(4,2) NOT NULL,
+    stress_level VARCHAR NOT NULL,
+    diet_status VARCHAR NOT NULL,
+    genetics VARCHAR DEFAULT 'average',
+    f_cap_computed DECIMAL(8,4),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(user_id, week_start)
+);

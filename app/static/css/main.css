@@ -392,7 +392,7 @@ footer {
     font-size: 0.85rem;
 }
 
-.hidden { display: none; }
+.hidden { display: none !important; }
 
 .muted { color: var(--muted); font-size: 0.9rem; margin-bottom: 0; }
 
@@ -400,3 +400,133 @@ footer {
     .macro-cards { grid-template-columns: repeat(2, 1fr); }
     .manual-form { grid-template-columns: 1fr 1fr; }
 }
+
+.training-container { max-width: 900px; margin: 2rem auto; }
+
+.training-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.fatigue-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.fatigue-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+}
+
+.fatigue-card.positive { border-color: var(--primary); }
+.fatigue-card.negative { border-color: var(--danger); }
+
+.fatigue-label {
+    color: var(--muted);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+}
+
+.fatigue-value {
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.fatigue-status {
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
+    color: var(--muted);
+}
+
+.exercise-block {
+    margin-bottom: 1rem;
+    padding: 1rem;
+}
+
+.exercise-block-header {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.exercise-block-header input { flex: 1; }
+
+.sets-grid { margin-top: 0.5rem; }
+
+.sets-header {
+    display: grid;
+    grid-template-columns: 60px 80px 120px 80px 80px;
+    gap: 0.5rem;
+    color: var(--muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+    padding: 0 0.25rem;
+}
+
+.set-row {
+    display: grid;
+    grid-template-columns: 60px 80px 120px 80px 80px;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.set-row input { text-align: center; }
+
+.set-fatigue {
+    display: flex;
+    align-items: center;
+    color: var(--muted);
+    font-size: 0.85rem;
+}
+
+.prediction-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    background: var(--dark);
+    border: 1px solid var(--primary);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin-top: 0.75rem;
+    font-size: 0.9rem;
+}
+
+.prediction-label {
+    color: var(--primary);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2rem;
+    width: 100%;
+    max-width: 480px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal h2 { margin-bottom: 0.25rem; }

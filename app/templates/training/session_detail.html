@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}Session Detail - FitML{% endblock %}
+{% block content %}
+<div class="training-container">
+    <div class="training-header">
+        <h1>{{ session.session_date }} — {{ session.session_type }}</h1>
+        <a href="/training/session/new"><button>+ New Session</button></a>
+    </div>
+
+    {% if session.notes %}
+    <p class="muted" style="margin-bottom:1rem">{{ session.notes }}</p>
+    {% endif %}
+
+    <div class="card">
+        <table class="log-table">
+            <thead>
+                <tr>
+                    <th>Exercise</th>
+                    <th>Type</th>
+                    <th>Sets</th>
+                    <th>Reps</th>
+                    <th>Weight (lbs)</th>
+                    <th>RIR</th>
+                    <th>Fatigue Cost</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in sets %}
+                <tr>
+                    <td>{{ s.exercise_name }}</td>
+                    <td>{{ s.exercise_type }}</td>
+                    <td>{{ s.sets_performed }}</td>
+                    <td>{{ s.reps_performed }}</td>
+                    <td>{{ s.weight_lbs }}</td>
+                    <td>{{ s.rir }}</td>
+                    <td>{{ s.total_fatigue }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <a href="/training">← Back to Training</a>
+</div>
+{% endblock %}

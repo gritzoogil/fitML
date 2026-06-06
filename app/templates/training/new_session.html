@@ -1,0 +1,179 @@
+{% extends 'base.html' %}
+{% block title %}New Session - FitML{% endblock %}
+{% block content %}
+<div class="form-container" style="max-width: 700px;">
+    <h1>Log Session</h1>
+
+    <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="session-date" value="{{ today }}" />
+    </div>
+
+    <div class="form-group">
+        <label>Session Type</label>
+        <select id="session-type">
+            <option value="chest_back">Chest / Back</option>
+            <option value="arms_shoulders">Arms / Shoulders</option>
+            <option value="full_body">Full Body</option>
+            <option value="legs">Legs</option>
+            <option value="cardio">Cardio</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>Notes (optional)</label>
+        <input type="text" id="session-notes" placeholder="e.g. felt strong today" />
+    </div>
+
+    <h2 style="margin: 1.5rem 0 1rem;">Exercises</h2>
+
+    <div id="exercises-container"></div>
+
+    <button class="btn-secondary" onclick="addExercise()">+ Add Exercise</button>
+
+    <div style="margin-top: 1.5rem;">
+        <button onclick="saveSession()">Save Session</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const exerciseTypes = {
+    'Pushups': 'moderate_compound',
+    'Pullups': 'heavy_axial',
+    'Dips': 'moderate_compound',
+    'Bicep Curl': 'isolation',
+    'Tricep Extension': 'isolation',
+    'Shoulder Press': 'moderate_compound',
+    'Lateral Raise': 'isolation',
+    'Bent Over Row': 'heavy_axial',
+    'Face Pull': 'isolation',
+    'Chest Fly': 'isolation',
+};
+
+let exerciseCount = 0;
+
+function addExercise() {
+    exerciseCount++;
+    const container = document.getElementById('exercises-container');
+    const div = document.createElement('div');
+    div.className = 'exercise-block card';
+    div.id = `exercise-${exerciseCount}`;
+    div.innerHTML = `
+        <div class="exercise-block-header">
+            <input type="text" class="exercise-name" placeholder="Exercise name (e.g. Pushups)"
+                oninput="autoFillType(this, ${exerciseCount})" />
+            <button class="btn-delete" onclick="removeExercise(${exerciseCount})">✕</button>
+        </div>
+        <div class="form-group">
+            <label>Exercise Type</label>
+            <select class="exercise-type" id="type-${exerciseCount}">
+                <option value="isolation">Isolation</option>
+                <option value="moderate_compound" selected>Moderate Compound</option>
+                <option value="heavy_axial">Heavy Axial (Deadlift, Row, Squat)</option>
+            </select>
+        </div>
+        <div class="sets-grid">
+            <div class="sets-header">
+                <span>Sets</span>
+                <span>Reps</span>
+                <span>Weight (lbs)</span>
+                <span>RIR</span>
+                <span>Fatigue</span>
+            </div>
+            <div class="sets-rows" id="sets-${exerciseCount}"></div>
+        </div>
+        <button class="btn-secondary" onclick="addSet(${exerciseCount})" style="margin-top:0.5rem">+ Add Set</button>
+        <div class="predict-section" id="predict-${exerciseCount}"></div>
+    `;
+    container.appendChild(div);
+    addSet(exerciseCount);
+}
+
+function autoFillType(input, id) {
+    const name = input.value.trim();
+    const typeSelect = document.getElementById(`type-${id}`);
+    if (exerciseTypes[name]) {
+        typeSelect.value = exerciseTypes[name];
+    }
+}
+
+function addSet(exerciseId) {
+    const container = document.getElementById(`sets-${exerciseId}`);
+    const row = document.createElement('div');
+    row.className = 'set-row';
+    row.innerHTML = `
+        <input type="number" class="set-sets" value="1" min="1" max="10" />
+        <input type="number" class="set-reps" placeholder="Reps" min="1" />
+        <input type="number" class="set-weight" placeholder="0" step="2.5" min="0" />
+        <input type="number" class="set-rir" placeholder="RIR" min="0" max="5" step="0.5" value="2" />
+        <span class="set-fatigue">—</span>
+    `;
+    container.appendChild(row);
+}
+
+function removeExercise(id) {
+    document.getElementById(`exercise-${id}`).remove();
+}
+
+async function getPrediction(exerciseName, exerciseId) {
+    if (!exerciseName) return;
+    const res = await fetch('/training/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ exercise_name: exerciseName })
+    });
+    const data = await res.json();
+    if (data.error) return;
+
+    const div = document.getElementById(`predict-${exerciseId}`);
+    div.innerHTML = `
+        <div class="prediction-card">
+            <span class="prediction-label">AI Recommendation</span>
+            <span>Next set: <strong>${data.next_weight} lbs × ${data.next_reps} reps</strong></span>
+            <span class="muted">1RM: ${data.one_rm} lbs | ${data.progression}</span>
+        </div>
+    `;
+}
+
+async function saveSession() {
+    const exercises = [];
+    document.querySelectorAll('.exercise-block').forEach(block => {
+        const name = block.querySelector('.exercise-name').value;
+        const type = block.querySelector('.exercise-type').value;
+        if (!name) return;
+
+        block.querySelectorAll('.set-row').forEach(row => {
+            exercises.push({
+                name,
+                exercise_type: type,
+                sets: row.querySelector('.set-sets').value,
+                reps: row.querySelector('.set-reps').value,
+                weight: row.querySelector('.set-weight').value || 0,
+                rir: row.querySelector('.set-rir').value || 2,
+            });
+        });
+    });
+
+    if (!exercises.length) return alert('Add at least one exercise.');
+
+    const res = await fetch('/training/session/new', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            date: document.getElementById('session-date').value,
+            session_type: document.getElementById('session-type').value,
+            notes: document.getElementById('session-notes').value,
+            exercises
+        })
+    });
+
+    const data = await res.json();
+    if (data.success) window.location.href = `/training/session/${data.session_id}`;
+}
+
+// Add first exercise automatically
+addExercise();
+</script>
+{% endblock %}

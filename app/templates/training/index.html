@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+{% block title %}Training - FitML{% endblock %}
+{% block content %}
+<div class="training-container">
+
+    <div class="training-header">
+        <h1>Training</h1>
+        <div style="display:flex; gap:0.75rem;">
+            <button class="btn-secondary" onclick="openCheckinModal()">Weekly Check-in</button>
+            <a href="/training/session/new"><button>+ New Session</button></a>
+        </div>
+    </div>
+
+    <!-- Fatigue Status -->
+    {% if f_cap %}
+    <div class="fatigue-cards">
+        <div class="fatigue-card">
+            <div class="fatigue-label">F_cap (Recovery Capacity)</div>
+            <div class="fatigue-value">{{ f_cap }}</div>
+        </div>
+        <div class="fatigue-card">
+            <div class="fatigue-label">F_total (This Week's Load)</div>
+            <div class="fatigue-value">{{ f_total }}</div>
+        </div>
+        <div class="fatigue-card {{ 'positive' if net_balance > 0 else 'negative' }}">
+            <div class="fatigue-label">Net Balance</div>
+            <div class="fatigue-value">{{ net_balance }}</div>
+            <div class="fatigue-status">
+                {% if net_balance > 20 %}
+                    💪 Room to add volume
+                {% elif net_balance > 0 %}
+                    ✅ On track
+                {% elif net_balance > -20 %}
+                    ⚠️ Near limit — train carefully
+                {% else %}
+                    🔴 Overreached — consider deload
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="card" style="margin-bottom:1.5rem; border-color: var(--warning);">
+        <p style="color: var(--warning);">⚠️ Complete your weekly check-in to see your fatigue capacity.</p>
+    </div>
+    {% endif %}
+
+    <!-- Recent Sessions -->
+    <div class="card">
+        <h2>Recent Sessions</h2>
+        {% if sessions %}
+        <table class="log-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Notes</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in sessions %}
+                <tr>
+                    <td>{{ s.session_date }}</td>
+                    <td>{{ s.session_type }}</td>
+                    <td>{{ s.notes or '—' }}</td>
+                    <td><a href="/training/session/{{ s.id }}">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <p>No sessions logged yet.</p>
+            <a href="/training/session/new"><button>Log First Session</button></a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Weekly Check-in Modal -->
+<div id="checkin-modal" class="modal-overlay {{ 'hidden' if not show_checkin_modal else '' }}">
+    <div class="modal">
+        <h2>Weekly Check-in</h2>
+        <p class="muted" style="margin-bottom:1.5rem">
+            Based on last week — this sets your training capacity for this week.
+        </p>
+
+        <div class="form-group">
+            <label>Avg Sleep Last Week (hours)</label>
+            <input type="number" id="checkin-sleep" step="0.25" min="3" max="12"
+                placeholder="e.g. 7.5" value="{{ checkin.avg_sleep_hours if checkin else '' }}" />
+        </div>
+
+        <div class="form-group">
+            <label>Stress Level Last Week</label>
+            <select id="checkin-stress">
+                <option value="low" {{ 'selected' if checkin and checkin.stress_level == 'low' }}>Low — minimal life stress</option>
+                <option value="moderate" {{ 'selected' if checkin and checkin.stress_level == 'moderate' else 'selected' if not checkin }}>Moderate — normal stress</option>
+                <option value="high" {{ 'selected' if checkin and checkin.stress_level == 'high' }}>High — significant stress</option>
+                <option value="severe" {{ 'selected' if checkin and checkin.stress_level == 'severe' }}>Severe — overwhelming stress</option>
+            </select>
+        </div>
+
+        <div style="display:flex; gap:0.75rem; margin-top:1.5rem;">
+            <button onclick="saveCheckin()">Save Check-in</button>
+            {% if not show_checkin_modal %}
+            <button class="btn-secondary" onclick="closeCheckinModal()">Cancel</button>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openCheckinModal() {
+    document.getElementById('checkin-modal').classList.remove('hidden');
+}
+
+function closeCheckinModal() {
+    document.getElementById('checkin-modal').classList.add('hidden');
+}
+
+async function saveCheckin() {
+    const sleep = document.getElementById('checkin-sleep').value;
+    if (!sleep) return alert('Please enter your average sleep hours.');
+
+    const res = await fetch('/training/checkin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            sleep_hours: parseFloat(sleep),
+            stress_level: document.getElementById('checkin-stress').value,
+        })
+    });
+
+    const data = await res.json();
+    if (data.success) {
+        window.location.reload();
+    } else {
+        alert('Error saving check-in.');
+    }
+}
+</script>
+{% endblock %}
