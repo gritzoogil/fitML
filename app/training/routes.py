@@ -169,9 +169,15 @@ def predict():
         FROM exercise_sets es
         JOIN training_sessions ts ON es.session_id = ts.id
         WHERE es.user_id = %s AND es.exercise_name = %s
-        ORDER BY ts.session_date DESC, es.created_at DESC
+        AND ts.session_date = (
+            SELECT MAX(ts2.session_date) 
+            FROM exercise_sets es2
+            JOIN training_sessions ts2 ON es2.session_id = ts2.id
+            WHERE es2.user_id = %s AND es2.exercise_name = %s
+        )
+        ORDER BY es.reps_performed DESC
         LIMIT 1
-    """, (user_id, exercise_name), fetch='one')
+    """, (user_id, exercise_name, user_id, exercise_name), fetch='one')
 
     if not last_set:
         return jsonify({'error': 'No previous data for this exercise'}), 404

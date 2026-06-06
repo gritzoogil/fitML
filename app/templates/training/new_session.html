@@ -54,6 +54,13 @@ const exerciseTypes = {
 
 let exerciseCount = 0;
 
+const debounceTimers = {};
+
+function debounce(fn, exerciseId, delay = 600) {
+    clearTimeout(debounceTimers[exerciseId]);
+    debounceTimers[exerciseId] = setTimeout(fn, delay);
+}
+
 function addExercise() {
     exerciseCount++;
     const container = document.getElementById('exercises-container');
@@ -63,7 +70,7 @@ function addExercise() {
     div.innerHTML = `
         <div class="exercise-block-header">
             <input type="text" class="exercise-name" placeholder="Exercise name (e.g. Pushups)"
-                oninput="autoFillType(this, ${exerciseCount})" />
+                oninput="debounce(() => autoFillType(this, ${exerciseCount}), ${exerciseCount})" />
             <button class="btn-delete" onclick="removeExercise(${exerciseCount})">✕</button>
         </div>
         <div class="form-group">
@@ -92,12 +99,75 @@ function addExercise() {
     addSet(exerciseCount);
 }
 
-function autoFillType(input, id) {
+async function autoFillType(input, exerciseId) {
     const name = input.value.trim();
-    const typeSelect = document.getElementById(`type-${id}`);
+    const typeSelect = document.getElementById(`type-${exerciseId}`);
+    
+    // Auto-fill exercise type
     if (exerciseTypes[name]) {
         typeSelect.value = exerciseTypes[name];
     }
+
+    // Get progressive overload recommendation
+    if (name.length < 3) return;
+    
+    const predictDiv = document.getElementById(`predict-${exerciseId}`);
+    predictDiv.innerHTML = `<div class="prediction-card"><span class="muted">Loading recommendation...</span></div>`;
+
+    try {
+        const res = await fetch('/training/predict', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ exercise_name: name })
+        });
+
+        const data = await res.json();
+
+        if (data.error) {
+            predictDiv.innerHTML = `
+                <div class="prediction-card">
+                    <span class="prediction-label">No Previous Data</span>
+                    <span class="muted">First time logging ${name} — set your own starting weight and reps.</span>
+                </div>`;
+            return;
+        }
+
+        const progressionText = {
+            'increase_weight': '📈 Increase weight — you had room to spare last session',
+            'add_rep': '💪 Add one rep — you hit your target last session',
+            'consolidate': '⚠️ Consolidate — last session was very hard, keep same weight'
+        }[data.progression] || '';
+
+        predictDiv.innerHTML = `
+            <div class="prediction-card">
+                <span class="prediction-label">AI Recommendation</span>
+                <div class="prediction-main">
+                    ${data.next_weight > 0
+                        ? `<span class="prediction-weight">${data.next_weight} lbs</span>
+                           <span class="prediction-x">×</span>`
+                        : `<span class="muted" style="font-size:0.85rem">Bodyweight ×</span>`
+                    }
+                    <span class="prediction-reps">${data.next_reps} reps</span>
+                </div>
+                ${data.one_rm ? `<span class="muted" style="font-size:0.8rem">1RM: ${data.one_rm} lbs</span>` : ''}
+                <span class="prediction-reason">${progressionText}</span>
+                <button class="btn-secondary" onclick="applyRecommendation(${exerciseId}, ${data.next_weight}, ${data.next_reps}, ${data.next_rir})"
+                    style="margin-top:0.5rem; font-size:0.8rem; padding:0.4rem 0.75rem;">
+                    Apply to All Sets
+                </button>
+            </div>`;
+    } catch (err) {
+        predictDiv.innerHTML = '';
+    }
+}
+
+function applyRecommendation(exerciseId, weight, reps, rir) {
+    const rows = document.querySelectorAll(`#sets-${exerciseId} .set-row`);
+    rows.forEach(row => {
+        row.querySelector('.set-reps').value = reps;
+        row.querySelector('.set-weight').value = weight;
+        row.querySelector('.set-rir').value = rir;
+    });
 }
 
 function addSet(exerciseId) {

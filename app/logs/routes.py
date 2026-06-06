@@ -44,32 +44,6 @@ def daily_log():
 
     return render_template('logs/daily.html', today=date.today())
 
-@logs_bp.route('/workout', methods=['GET', 'POST'])
-@login_required
-def workout_log():
-    if request.method == 'POST':
-        user_id = session['user_id']
-        data = request.get_json()
-        log_date = data.get('date')
-        exercises = data.get('exercises', [])
-
-        for exercise in exercises:
-            execute_query("""
-                INSERT INTO workout_logs
-                (user_id, date, exercise, sets, reps, weight_lbs)
-                VALUES (%s, %s, %s, %s, %s, %s)
-            """, (
-                user_id, log_date,
-                exercise['name'],
-                exercise['sets'],
-                exercise['reps'],
-                exercise.get('weight', 0)
-            ))
-
-        return jsonify({'success': True})
-
-    return render_template('logs/workout.html')
-
 @logs_bp.route('/history')
 @login_required
 def history():

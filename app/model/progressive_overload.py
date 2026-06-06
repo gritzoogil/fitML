@@ -82,38 +82,29 @@ def lander_reps(one_rm, new_weight):
         return 1
     return round((101.3 - (100 * new_weight / one_rm)) / 2.67123)
 
-def predict_next_session(last_weight, last_reps, last_rir, target_rir=2):
-    """
-    Given last session performance, predict next session's weight and reps.
-    
-    Logic:
-    - If RIR > target: increase weight by smallest increment (2.5 lbs)
-    - If RIR == target: keep weight, add 1 rep
-    - If RIR < target: keep weight, reduce reps
-    """
-    one_rm = average_1rm(last_weight, last_reps)
+def predict_next_session(last_weight, last_reps, last_rir):
+    if last_weight == 0:
+        return {
+            'next_weight': 0,
+            'next_reps': last_reps + 1,
+            'next_rir': last_rir,
+            'one_rm': None,
+            'progression': 'add_rep'
+        }
 
-    if last_rir > target_rir:
-        # Ready to progress — increase weight
-        next_weight = last_weight + 2.5
-        predicted_reps_e = epley_reps(one_rm, next_weight)
-        predicted_reps_b = brzycki_reps(one_rm, next_weight)
-        predicted_reps_l = lander_reps(one_rm, next_weight)
-        next_reps = round((predicted_reps_e + predicted_reps_b + predicted_reps_l) / 3)
-    elif last_rir == target_rir:
-        # On target — add one rep
-        next_weight = last_weight
-        next_reps = last_reps + 1
-    else:
-        # Too hard — keep weight, reduce reps
-        next_weight = last_weight
-        next_reps = max(1, last_reps - 1)
+    one_rm = average_1rm(last_weight, last_reps)
+    next_weight = last_weight + 2.5
+    predicted_reps_e = epley_reps(one_rm, next_weight)
+    predicted_reps_b = brzycki_reps(one_rm, next_weight)
+    predicted_reps_l = lander_reps(one_rm, next_weight)
+    next_reps = round((predicted_reps_e + predicted_reps_b + predicted_reps_l) / 3)
 
     return {
         'next_weight': next_weight,
         'next_reps': next_reps,
+        'next_rir': last_rir,
         'one_rm': round(one_rm, 1),
-        'progression': 'increase_weight' if last_rir > target_rir else 'add_rep' if last_rir == target_rir else 'consolidate'
+        'progression': 'increase_weight'
     }
 
 def compute_fatigue_per_set(exercise_type, rir, training_age='intermediate', diet='moderate_cut', age_bracket='under_25'):
