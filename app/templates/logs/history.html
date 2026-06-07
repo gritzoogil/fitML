@@ -12,9 +12,6 @@
             <tr>
                 <th>Date</th>
                 <th>Weight (lbs)</th>
-                <th>Calories In</th>
-                <th>Protein (g)</th>
-                <th>Calories Burned</th>
                 <th>Workout</th>
             </tr>
         </thead>
@@ -23,9 +20,6 @@
             <tr>
                 <td>{{ log.date }}</td>
                 <td>{{ log.weight_lbs }}</td>
-                <td>{{ log.calories_in }}</td>
-                <td>{{ log.protein_g }}</td>
-                <td>{{ log.calories_burned }}</td>
                 <td>{{ '✅' if log.workout_done else '❌' }}</td>
             </tr>
             {% endfor %}

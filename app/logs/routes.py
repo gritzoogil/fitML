@@ -19,10 +19,15 @@ def daily_log():
         user_id = session['user_id']
         log_date = request.form.get('date')
         weight = request.form.get('weight')
-        calories_in = request.form.get('calories_in')
-        protein = request.form.get('protein')
-        calories_burned = request.form.get('calories_burned')
-        workout_done = request.form.get('workout_done') == 'on'
+
+        # Auto-detect if user worked out based on training sessions
+        session_today = execute_query("""
+            SELECT id FROM training_sessions
+            WHERE user_id = %s AND session_date = %s
+        """, (user_id, log_date), fetch='one')
+
+        workout_done = session_today is not None
+        calories_burned = 300 if workout_done else 0
 
         existing = execute_query(
             "SELECT id FROM daily_logs WHERE user_id = %s AND date = %s",
@@ -30,17 +35,17 @@ def daily_log():
         )
 
         if existing:
-            flash('You already logged this date. Use edit to update it.', 'error')
+            flash('You already logged this date.', 'error')
             return redirect('/logs/daily')
 
         execute_query("""
             INSERT INTO daily_logs 
-            (user_id, date, weight_lbs, calories_in, protein_g, calories_burned, workout_done)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-        """, (user_id, log_date, weight, calories_in, protein, calories_burned, workout_done))
+            (user_id, date, weight_lbs, calories_burned, workout_done)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (user_id, log_date, weight, calories_burned, workout_done))
 
         flash('Log saved successfully!', 'success')
-        return redirect('/logs/history')
+        return redirect('/dashboard')
 
     return render_template('logs/daily.html', today=date.today())
 
@@ -49,8 +54,7 @@ def daily_log():
 def history():
     user_id = session['user_id']
     logs = execute_query("""
-        SELECT date, weight_lbs, calories_in, protein_g, 
-               calories_burned, workout_done
+        SELECT date, weight_lbs, calories_burned, workout_done
         FROM daily_logs
         WHERE user_id = %s
         ORDER BY date DESC
