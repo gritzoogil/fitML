@@ -13,14 +13,37 @@
                 <th>Date</th>
                 <th>Weight (lbs)</th>
                 <th>Workout</th>
+                <th></th>
             </tr>
         </thead>
         <tbody>
             {% for log in logs %}
-            <tr>
+            <tr id="log-row-{{ log.date }}">
                 <td>{{ log.date }}</td>
-                <td>{{ log.weight_lbs }}</td>
+                <td>
+                    <span class="view-mode">{{ log.weight_lbs }}</span>
+                    <input class="edit-mode hidden" type="number"
+                        value="{{ log.weight_lbs }}" step="0.1"
+                        style="width:80px; text-align:center;" />
+                </td>
                 <td>{{ '✅' if log.workout_done else '❌' }}</td>
+                <td>
+                    <button class="btn-secondary view-mode"
+                        onclick="enableWeightEdit('{{ log.date }}')"
+                        style="font-size:0.75rem; padding:0.25rem 0.5rem;">
+                        Edit
+                    </button>
+                    <button class="edit-mode hidden"
+                        onclick="saveWeightEdit('{{ log.date }}')"
+                        style="font-size:0.75rem; padding:0.25rem 0.5rem;">
+                        Save
+                    </button>
+                    <button class="btn-secondary edit-mode hidden"
+                        onclick="cancelWeightEdit('{{ log.date }}')"
+                        style="font-size:0.75rem; padding:0.25rem 0.5rem;">
+                        Cancel
+                    </button>
+                </td>
             </tr>
             {% endfor %}
         </tbody>
@@ -32,4 +55,37 @@
     </div>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function enableWeightEdit(logDate) {
+    const row = document.getElementById(`log-row-${logDate}`);
+    row.querySelectorAll('.view-mode').forEach(el => el.classList.add('hidden'));
+    row.querySelectorAll('.edit-mode').forEach(el => el.classList.remove('hidden'));
+}
+
+function cancelWeightEdit(logDate) {
+    const row = document.getElementById(`log-row-${logDate}`);
+    row.querySelectorAll('.view-mode').forEach(el => el.classList.remove('hidden'));
+    row.querySelectorAll('.edit-mode').forEach(el => el.classList.add('hidden'));
+}
+
+async function saveWeightEdit(logDate) {
+    const row = document.getElementById(`log-row-${logDate}`);
+    const weight = row.querySelector('input[type="number"]').value;
+
+    const res = await fetch(`/logs/edit/${logDate}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ weight })
+    });
+
+    const data = await res.json();
+    if (data.success) {
+        row.querySelector('.view-mode').textContent = weight;
+        cancelWeightEdit(logDate);
+    }
+}
+</script>
 {% endblock %}

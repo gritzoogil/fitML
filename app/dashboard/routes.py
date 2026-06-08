@@ -44,7 +44,7 @@ def index():
 
     # Today's daily log
     today_log = execute_query("""
-        SELECT weight_lbs, calories_in, protein_g, workout_done
+        SELECT weight_lbs, workout_done
         FROM daily_logs
         WHERE user_id = %s AND date = %s
     """, (user_id, today), fetch='one')

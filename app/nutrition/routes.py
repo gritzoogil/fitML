@@ -19,17 +19,20 @@ def login_required(f):
 @login_required
 def index():
     user_id = session['user_id']
-    today = date.today()
+    date_str = request.args.get('date', str(date.today()))
+    
+    try:
+        selected_date = date.fromisoformat(date_str)
+    except ValueError:
+        selected_date = date.today()
 
-    # Get today's food logs
     food_logs = execute_query("""
         SELECT id, meal_type, food_name, calories, protein_g, carbs_g, fat_g, source
         FROM food_logs
         WHERE user_id = %s AND date = %s
         ORDER BY created_at ASC
-    """, (user_id, today), fetch='all')
+    """, (user_id, selected_date), fetch='all')
 
-    # Get daily totals
     totals = execute_query("""
         SELECT 
             COALESCE(SUM(calories), 0) as total_calories,
@@ -38,9 +41,8 @@ def index():
             COALESCE(SUM(fat_g), 0) as total_fat
         FROM food_logs
         WHERE user_id = %s AND date = %s
-    """, (user_id, today), fetch='one')
+    """, (user_id, selected_date), fetch='one')
 
-    # Get user goals
     goals = execute_query("""
         SELECT daily_calorie_target, daily_protein_target, 
                daily_carb_target, daily_fat_target
@@ -52,7 +54,8 @@ def index():
         food_logs=food_logs,
         totals=totals,
         goals=goals,
-        today=today
+        today=date.today(),
+        selected_date=selected_date
     )
 
 @nutrition_bp.route('/add', methods=['POST'])
@@ -108,16 +111,16 @@ def estimate_food():
                         "role": "user",
                         "content": f"""Estimate the calories and macros for this food: "{food_description}"
 
-Return ONLY a JSON object:
-{{
-    "food_name": "standardized name",
-    "calories": number,
-    "protein_g": number,
-    "carbs_g": number,
-    "fat_g": number,
-    "confidence": "high" or "medium" or "low",
-    "notes": "brief note about the estimate"
-}}"""
+                Return ONLY a JSON object:
+                {{
+                    "food_name": "standardized name",
+                    "calories": number,
+                    "protein_g": number,
+                    "carbs_g": number,
+                    "fat_g": number,
+                    "confidence": "high" or "medium" or "low",
+                    "notes": "brief note about the estimate"
+                }}"""
                     }
                 ],
                 "max_tokens": 500,
@@ -145,3 +148,29 @@ def delete_food(log_id):
         (log_id, user_id)
     )
     return jsonify({'success': True})
+
+@nutrition_bp.route('/search')
+@login_required
+def search_food():
+    query = request.args.get('q', '').strip()
+    if len(query) < 2:
+        return jsonify([])
+
+    # Split into words and search for any word match
+    words = query.split()
+    like_conditions = ' AND '.join([f"food_name ILIKE %s" for _ in words])
+    params = [f'%{word}%' for word in words] + [query, f'{query}%']
+
+    results = execute_query(f"""
+        SELECT id, food_name, calories, protein_g, fat_g, carbs_g, fibre_g, sodium_mg
+        FROM foods
+        WHERE {like_conditions}
+        ORDER BY 
+            CASE WHEN LOWER(food_name) = LOWER(%s) THEN 0
+                 WHEN LOWER(food_name) LIKE LOWER(%s) THEN 1
+                 ELSE 2 END,
+            LENGTH(food_name)
+        LIMIT 10
+    """, params, fetch='all')
+
+    return jsonify([dict(r) for r in results])

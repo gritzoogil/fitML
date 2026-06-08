@@ -12,21 +12,21 @@
     <div class="stats-grid">
         <div class="stat-card">
             <div class="stat-label">Current Weight</div>
-            <div class="stat-value">{{ current_weight or '—' }} <span class="stat-unit">lbs</span></div>
+            <div class="stat-value">{{ current_weight or '-' }} <span class="stat-unit">lbs</span></div>
         </div>
         <div class="stat-card {{ 'good' if predicted_weight and predicted_weight < current_weight else '' }}">
             <div class="stat-label">Predicted (14 days)</div>
-            <div class="stat-value">{{ predicted_weight or '—' }} <span class="stat-unit">lbs</span></div>
+            <div class="stat-value">{{ predicted_weight or '-' }} <span class="stat-unit">lbs</span></div>
             {% if confidence %}<div class="stat-sub">{{ confidence }}% confidence</div>{% endif %}
         </div>
         <div class="stat-card">
             <div class="stat-label">Goal Weight</div>
-            <div class="stat-value">{{ goals.goal_weight_lbs if goals else '—' }} <span class="stat-unit">lbs</span></div>
+            <div class="stat-value">{{ goals.goal_weight_lbs if goals else '-' }} <span class="stat-unit">lbs</span></div>
             {% if days_to_goal %}<div class="stat-sub">{{ days_to_goal }} days left</div>{% endif %}
         </div>
         <div class="stat-card {{ 'good' if net_balance and net_balance > 0 else 'warning' if net_balance else '' }}">
             <div class="stat-label">Net Balance</div>
-            <div class="stat-value">{{ net_balance or '—' }}</div>
+            <div class="stat-value">{{ net_balance or '-' }}</div>
             {% if f_cap %}<div class="stat-sub">F_cap: {{ f_cap }} / F_total: {{ f_total }}</div>{% endif %}
         </div>
     </div>
@@ -95,14 +95,6 @@
                 <div class="today-stat">
                     <span class="today-label">Weight</span>
                     <span class="today-value">{{ today_log.weight_lbs }} lbs</span>
-                </div>
-                <div class="today-stat">
-                    <span class="today-label">Calories In</span>
-                    <span class="today-value">{{ today_log.calories_in }}</span>
-                </div>
-                <div class="today-stat">
-                    <span class="today-label">Protein</span>
-                    <span class="today-value">{{ today_log.protein_g }}g</span>
                 </div>
                 <div class="today-stat">
                     <span class="today-label">Workout</span>

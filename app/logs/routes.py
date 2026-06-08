@@ -62,3 +62,17 @@ def history():
     """, (user_id,), fetch='all')
 
     return render_template('logs/history.html', logs=logs)
+
+@logs_bp.route('/edit/<log_date>', methods=['POST'])
+@login_required
+def edit_log(log_date):
+    user_id = session['user_id']
+    data = request.get_json()
+    weight = data.get('weight')
+
+    execute_query("""
+        UPDATE daily_logs SET weight_lbs = %s
+        WHERE user_id = %s AND date = %s
+    """, (weight, user_id, log_date))
+
+    return jsonify({'success': True})

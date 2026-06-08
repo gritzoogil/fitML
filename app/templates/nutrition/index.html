@@ -3,19 +3,23 @@
 {% block content %}
 <div class="nutrition-container">
 
-    <!-- Daily Summary -->
     <div class="nutrition-header">
-        <h1>Nutrition — {{ today }}</h1>
+        <h1>Nutrition</h1>
+        <div style="display:flex; align-items:center; gap:1rem;">
+            <input type="date" id="date-picker" value="{{ selected_date }}"
+                onchange="window.location.href='/nutrition/?date='+this.value"
+                style="width:auto;" />
+        </div>
     </div>
 
     {% if goals %}
     <div class="macro-cards">
         <div class="macro-card">
             <div class="macro-label">Calories</div>
-            <div class="macro-value">{{ totals.total_calories }}</div>
+            <div class="macro-value">{{ totals.total_calories|int }}</div>
             <div class="macro-goal">/ {{ goals.daily_calorie_target }}</div>
             <div class="macro-bar">
-                <div class="macro-fill calories-fill" 
+                <div class="macro-fill calories-fill"
                      style="width: {{ [((totals.total_calories / goals.daily_calorie_target) * 100)|int, 100]|min }}%">
                 </div>
             </div>
@@ -53,26 +57,48 @@
     </div>
     {% endif %}
 
-    <!-- LLM Food Estimator -->
+    <!-- Food Estimator — Toggle -->
     <div class="card llm-estimator">
-        <h2>AI Food Estimator</h2>
-        <p class="muted">Describe any food — AI will estimate the calories and macros instantly.</p>
-        <div class="llm-input-row">
-            <input type="text" id="food-description" 
-                placeholder="e.g. 1 cup sinangag, 2 eggs, 1 piece longganisa" />
-            <button onclick="estimateFood()">Estimate</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+            <h2>Add Food</h2>
+            <div class="toggle-tabs">
+                <button class="toggle-tab active" id="tab-ai" onclick="switchTab('ai')">AI Estimate</button>
+                <button class="toggle-tab" id="tab-db" onclick="switchTab('db')">Search Database</button>
+            </div>
         </div>
-        <div id="estimate-result" class="estimate-result hidden"></div>
+
+        <!-- AI Tab -->
+        <div id="panel-ai">
+            <p class="muted">Describe any food. AI estimates calories and macros instantly.</p>
+            <div class="llm-input-row">
+                <input type="text" id="food-description"
+                    placeholder="e.g. 1 cup sinangag, 2 eggs, 1 piece longganisa"
+                    onkeydown="if(event.key==='Enter') estimateFood()" />
+                <button onclick="estimateFood()" id="estimate-btn">Estimate</button>
+            </div>
+            <div id="estimate-result" class="estimate-result hidden"></div>
+        </div>
+
+        <!-- Database Tab -->
+        <div id="panel-db" class="hidden">
+            <p class="muted">Search 3,741 foods from the AUSNUT 2023 database.</p>
+            <div class="llm-input-row">
+                <input type="text" id="food-search"
+                    placeholder="e.g. chicken breast, white rice, egg"
+                    oninput="debounceSearch(this.value)" />
+            </div>
+            <div id="search-results" class="search-results hidden"></div>
+            <div id="db-selected" class="estimate-result hidden"></div>
+        </div>
     </div>
 
     <!-- Food Log -->
     <div class="card">
         <div class="food-log-header">
-            <h2>Today's Food Log</h2>
-            <button onclick="toggleManualAdd()">+ Add Manually</button>
+            <h2>Food Log - {{ selected_date }}</h2>
+            <button class="btn-secondary" onclick="toggleManualAdd()">+ Add Manually</button>
         </div>
 
-        <!-- Manual Add Form -->
         <div id="manual-add" class="manual-add hidden">
             <div class="manual-form">
                 <select id="manual-meal-type">
@@ -90,7 +116,6 @@
             </div>
         </div>
 
-        <!-- Food entries -->
         {% if food_logs %}
         <table class="log-table">
             <thead>
@@ -114,19 +139,15 @@
                     <td>{{ log.protein_g }}</td>
                     <td>{{ log.carbs_g }}</td>
                     <td>{{ log.fat_g }}</td>
-                    <td>
-                        <span class="source-badge {{ log.source }}">{{ log.source }}</span>
-                    </td>
-                    <td>
-                        <button class="btn-delete" onclick="deleteFood('{{ log.id }}')">✕</button>
-                    </td>
+                    <td><span class="source-badge {{ log.source }}">{{ log.source }}</span></td>
+                    <td><button class="btn-delete" onclick="deleteFood('{{ log.id }}')">✕</button></td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
         {% else %}
         <div class="empty-state">
-            <p>No food logged yet today. Use the AI estimator above!</p>
+            <p>No food logged for {{ selected_date }}.</p>
         </div>
         {% endif %}
     </div>
@@ -135,11 +156,22 @@
 
 {% block scripts %}
 <script>
+const selectedDate = '{{ selected_date }}';
+
+// ── Tab toggle ──
+function switchTab(tab) {
+    document.getElementById('panel-ai').classList.toggle('hidden', tab !== 'ai');
+    document.getElementById('panel-db').classList.toggle('hidden', tab !== 'db');
+    document.getElementById('tab-ai').classList.toggle('active', tab === 'ai');
+    document.getElementById('tab-db').classList.toggle('active', tab === 'db');
+}
+
+// ── AI Estimator ──
 async function estimateFood() {
     const description = document.getElementById('food-description').value;
     if (!description) return;
 
-    const btn = document.querySelector('.llm-estimator button');
+    const btn = document.getElementById('estimate-btn');
     btn.textContent = 'Estimating...';
     btn.disabled = true;
 
@@ -153,14 +185,14 @@ async function estimateFood() {
     btn.textContent = 'Estimate';
     btn.disabled = false;
 
-    if (data.error) {
-        alert('Error: ' + data.error);
-        return;
-    }
+    if (data.error) { alert('Error: ' + data.error); return; }
+    showEstimateResult(data, 'estimate-result', 'ai');
+}
 
-    const resultDiv = document.getElementById('estimate-result');
-    resultDiv.classList.remove('hidden');
-    resultDiv.innerHTML = `
+function showEstimateResult(data, containerId, source) {
+    const div = document.getElementById(containerId);
+    div.classList.remove('hidden');
+    div.innerHTML = `
         <div class="estimate-card">
             <div class="estimate-food-name">${data.food_name}</div>
             <div class="estimate-macros">
@@ -169,28 +201,27 @@ async function estimateFood() {
                 <span class="carbs">${data.carbs_g}g carbs</span>
                 <span class="fat">${data.fat_g}g fat</span>
             </div>
-            <div class="estimate-notes">${data.notes}</div>
-            <div class="estimate-confidence">Confidence: ${data.confidence}</div>
+            ${data.notes ? `<div class="estimate-notes">${data.notes}</div>` : ''}
+            ${data.confidence ? `<div class="estimate-confidence">Confidence: ${data.confidence}</div>` : ''}
             <div class="estimate-actions">
-                <select id="estimate-meal-type">
+                <select id="${containerId}-meal">
                     <option value="breakfast">Breakfast</option>
                     <option value="lunch">Lunch</option>
                     <option value="dinner">Dinner</option>
                     <option value="snack">Snack</option>
                 </select>
-                <button onclick="saveEstimate(${JSON.stringify(data).replace(/"/g, '&quot;')})">
+                <button onclick='saveEstimate(${JSON.stringify(data).replace(/"/g, "&quot;")}, "${containerId}", "${source}")'>
                     Add to Log
                 </button>
-                <button class="btn-secondary" onclick="document.getElementById('estimate-result').classList.add('hidden')">
+                <button class="btn-secondary" onclick="document.getElementById('${containerId}').classList.add('hidden')">
                     Discard
                 </button>
             </div>
-        </div>
-    `;
+        </div>`;
 }
 
-async function saveEstimate(data) {
-    const mealType = document.getElementById('estimate-meal-type').value;
+async function saveEstimate(data, containerId, source) {
+    const mealType = document.getElementById(`${containerId}-meal`).value;
     await fetch('/nutrition/add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -201,15 +232,134 @@ async function saveEstimate(data) {
             carbs_g: data.carbs_g,
             fat_g: data.fat_g,
             meal_type: mealType,
-            source: 'llm'
+            source: source,
+            date: selectedDate
         })
     });
     window.location.reload();
 }
 
+// ── Database Search ──
+let searchTimer;
+function debounceSearch(query) {
+    clearTimeout(searchTimer);
+    if (query.length < 2) {
+        document.getElementById('search-results').classList.add('hidden');
+        return;
+    }
+    searchTimer = setTimeout(() => searchFood(query), 400);
+}
+
+async function searchFood(query) {
+    const res = await fetch(`/nutrition/search?q=${encodeURIComponent(query)}`);
+    const results = await res.json();
+
+    const container = document.getElementById('search-results');
+    if (!results.length) {
+        container.innerHTML = '<div class="search-empty">No foods found. Try AI Estimate instead.</div>';
+        container.classList.remove('hidden');
+        return;
+    }
+
+    container.innerHTML = results.map(f => `
+        <div class="search-result-item" onclick='selectFood(${JSON.stringify(f).replace(/"/g, "&quot;")})'>
+            <div class="search-result-name">${f.food_name}</div>
+            <div class="search-result-macros">
+                <span class="cal">${f.calories ? Math.round(f.calories) : '-'} cal</span>
+                <span class="protein">${f.protein_g || 0}g P</span>
+                <span class="carbs">${f.carbs_g || 0}g C</span>
+                <span class="fat">${f.fat_g || 0}g F</span>
+                <span class="muted" style="font-size:0.75rem">per 100g</span>
+            </div>
+        </div>
+    `).join('');
+    container.classList.remove('hidden');
+}
+
+function selectFood(food) {
+    document.getElementById('search-results').classList.add('hidden');
+    document.getElementById('food-search').value = food.food_name;
+
+    // Allow quantity input
+    const data = {
+        food_name: food.food_name,
+        calories: Math.round(food.calories || 0),
+        protein_g: food.protein_g || 0,
+        carbs_g: food.carbs_g || 0,
+        fat_g: food.fat_g || 0,
+        notes: 'Per 100g - adjust for your serving size',
+        confidence: null
+    };
+
+    const div = document.getElementById('db-selected');
+    div.classList.remove('hidden');
+    div.innerHTML = `
+        <div class="estimate-card">
+            <div class="estimate-food-name">${food.food_name}</div>
+            <div class="estimate-notes" style="margin-bottom:0.75rem">Values per 100g - enter your serving size below</div>
+            <div style="display:flex; gap:0.5rem; align-items:center; margin-bottom:0.75rem;">
+                <input type="number" id="serving-size" value="100" min="1" max="2000"
+                    style="width:80px; text-align:center;"
+                    oninput="updateServing(${food.calories||0}, ${food.protein_g||0}, ${food.carbs_g||0}, ${food.fat_g||0})" />
+                <span class="muted">g</span>
+            </div>
+            <div class="estimate-macros" id="serving-macros">
+                <span class="cal" id="s-cal">${Math.round(food.calories||0)} cal</span>
+                <span class="protein" id="s-protein">${food.protein_g||0}g protein</span>
+                <span class="carbs" id="s-carbs">${food.carbs_g||0}g carbs</span>
+                <span class="fat" id="s-fat">${food.fat_g||0}g fat</span>
+            </div>
+            <div class="estimate-actions" style="margin-top:0.75rem;">
+                <select id="db-meal-type">
+                    <option value="breakfast">Breakfast</option>
+                    <option value="lunch">Lunch</option>
+                    <option value="dinner">Dinner</option>
+                    <option value="snack">Snack</option>
+                </select>
+                <button onclick="saveDbFood('${food.food_name.replace(/'/g, "\\'")}', ${food.calories||0}, ${food.protein_g||0}, ${food.carbs_g||0}, ${food.fat_g||0})">
+                    Add to Log
+                </button>
+                <button class="btn-secondary" onclick="document.getElementById('db-selected').classList.add('hidden')">
+                    Discard
+                </button>
+            </div>
+        </div>`;
+}
+
+function updateServing(cal, protein, carbs, fat) {
+    const serving = parseFloat(document.getElementById('serving-size').value) || 100;
+    const factor = serving / 100;
+    document.getElementById('s-cal').textContent = Math.round(cal * factor) + ' cal';
+    document.getElementById('s-protein').textContent = (protein * factor).toFixed(1) + 'g protein';
+    document.getElementById('s-carbs').textContent = (carbs * factor).toFixed(1) + 'g carbs';
+    document.getElementById('s-fat').textContent = (fat * factor).toFixed(1) + 'g fat';
+}
+
+async function saveDbFood(name, cal, protein, carbs, fat) {
+    const serving = parseFloat(document.getElementById('serving-size').value) || 100;
+    const factor = serving / 100;
+    const mealType = document.getElementById('db-meal-type').value;
+
+    await fetch('/nutrition/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            food_name: `${name} (${serving}g)`,
+            calories: Math.round(cal * factor),
+            protein_g: parseFloat((protein * factor).toFixed(1)),
+            carbs_g: parseFloat((carbs * factor).toFixed(1)),
+            fat_g: parseFloat((fat * factor).toFixed(1)),
+            meal_type: mealType,
+            source: 'database',
+            date: selectedDate
+        })
+    });
+    window.location.reload();
+}
+
+// ── Manual Add ──
 function toggleManualAdd() {
-    const form = document.getElementById('manual-add');
-    form.classList.toggle('hidden');
+    document.getElementById('manual-add').classList.toggle('hidden');
 }
 
 async function saveManualFood() {
@@ -220,9 +370,9 @@ async function saveManualFood() {
         carbs_g: parseFloat(document.getElementById('manual-carbs').value) || 0,
         fat_g: parseFloat(document.getElementById('manual-fat').value) || 0,
         meal_type: document.getElementById('manual-meal-type').value,
-        source: 'manual'
+        source: 'manual',
+        date: selectedDate
     };
-
     await fetch('/nutrition/add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

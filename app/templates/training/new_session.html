@@ -127,15 +127,15 @@ async function autoFillType(input, exerciseId) {
             predictDiv.innerHTML = `
                 <div class="prediction-card">
                     <span class="prediction-label">No Previous Data</span>
-                    <span class="muted">First time logging ${name} — set your own starting weight and reps.</span>
+                    <span class="muted">First time logging ${name} - set your own starting weight and reps.</span>
                 </div>`;
             return;
         }
 
         const progressionText = {
-            'increase_weight': '📈 Increase weight — you had room to spare last session',
-            'add_rep': '💪 Add one rep — you hit your target last session',
-            'consolidate': '⚠️ Consolidate — last session was very hard, keep same weight'
+            'increase_weight': '📈 Increase weight - you had room to spare last session',
+            'add_rep': '💪 Add one rep - you hit your target last session',
+            'consolidate': '⚠️ Consolidate - last session was very hard, keep same weight'
         }[data.progression] || '';
 
         predictDiv.innerHTML = `
@@ -180,7 +180,7 @@ function addSet(exerciseId) {
         <input type="number" class="set-reps" placeholder="Reps" min="1" />
         <input type="number" class="set-weight" placeholder="0" step="2.5" min="0" />
         <input type="number" class="set-rir" placeholder="RIR" min="0" max="5" step="1" value="2" />
-        <span class="set-fatigue">—</span>
+        <span class="set-fatigue">-</span>
         <button class="btn-delete" onclick="removeSet(this)">✕</button>
     `;
     container.appendChild(row);

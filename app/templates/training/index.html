@@ -31,9 +31,9 @@
                 {% elif net_balance > 0 %}
                     ✅ On track
                 {% elif net_balance > -20 %}
-                    ⚠️ Near limit — train carefully
+                    ⚠️ Near limit - train carefully
                 {% else %}
-                    🔴 Overreached — consider deload
+                    🔴 Overreached - consider deload
                 {% endif %}
             </div>
         </div>
@@ -62,7 +62,7 @@
                 <tr>
                     <td>{{ s.session_date }}</td>
                     <td>{{ s.session_type }}</td>
-                    <td>{{ s.notes or '—' }}</td>
+                    <td>{{ s.notes or '-' }}</td>
                     <td><a href="/training/session/{{ s.id }}">View</a></td>
                 </tr>
                 {% endfor %}
@@ -82,7 +82,7 @@
     <div class="modal">
         <h2>Weekly Check-in</h2>
         <p class="muted" style="margin-bottom:1.5rem">
-            Based on last week — this sets your training capacity for this week.
+            Based on last week - this sets your training capacity for this week.
         </p>
 
         <div class="form-group">
@@ -94,10 +94,10 @@
         <div class="form-group">
             <label>Stress Level Last Week</label>
             <select id="checkin-stress">
-                <option value="low" {{ 'selected' if checkin and checkin.stress_level == 'low' }}>Low — minimal life stress</option>
-                <option value="moderate" {{ 'selected' if checkin and checkin.stress_level == 'moderate' else 'selected' if not checkin }}>Moderate — normal stress</option>
-                <option value="high" {{ 'selected' if checkin and checkin.stress_level == 'high' }}>High — significant stress</option>
-                <option value="severe" {{ 'selected' if checkin and checkin.stress_level == 'severe' }}>Severe — overwhelming stress</option>
+                <option value="low" {{ 'selected' if checkin and checkin.stress_level == 'low' }}>Low - minimal life stress</option>
+                <option value="moderate" {{ 'selected' if checkin and checkin.stress_level == 'moderate' else 'selected' if not checkin }}>Moderate - normal stress</option>
+                <option value="high" {{ 'selected' if checkin and checkin.stress_level == 'high' }}>High - significant stress</option>
+                <option value="severe" {{ 'selected' if checkin and checkin.stress_level == 'severe' }}>Severe - overwhelming stress</option>
             </select>
         </div>
 
